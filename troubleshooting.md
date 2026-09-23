@@ -53,21 +53,9 @@
 
 **Problem**: Unsure if PyTorch is properly using ROCm inside container
 
-**Solution**: Run this verification command:
-```bash
-python -c "
-import torch
-print('PyTorch version:', torch.__version__)
-print('HIP version:', torch.version.hip if hasattr(torch.version, 'hip') else 'Not available')
-print('ROCm/HIP available:', torch.backends.hip.is_available() if hasattr(torch.backends, 'hip') else False)
-print('CUDA available:', torch.cuda.is_available())  # Should be False for pure ROCm
-"
-```
-Expected output for working ROCm setup:
-- PyTorch version: 2.1.30+rocm10.0 (or similar)
-- HIP version: 5.6.x or similar
-- ROCm/HIP available: True
-- CUDA available: False
+**Solution**: Run the GPU check in [Verification Steps](#verification-steps) step 1. ROCm builds of PyTorch use the `torch.cuda` API, so a working GPU shows `GPU available: True` even though no CUDA is involved.
+
+If `GPU available` is `False` but `HIP version` shows a version, the image's PyTorch is fine and the container can't see the GPU: it was started without `--device=/dev/kfd --device=/dev/dri --group-add video` (see section 3).
 
 ### 5. General Testing Failures
 
@@ -83,11 +71,16 @@ Expected output for working ROCm setup:
 
 After successful build and run:
 
-1. **Check PyTorch ROCm integration**:
+1. **Check PyTorch can use the GPU**:
    ```bash
    docker run --device=/dev/kfd --device=/dev/dri --group-add video --rm ai-wordle-rl \
-   python -c "import torch; print('ROCm available:', torch.backends.hip.is_available())"
+   python -c "import torch; print('HIP version:', torch.version.hip); print('CUDA version:', torch.version.cuda); print('GPU available:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
    ```
+   A working setup shows:
+   - `HIP version`: any version (a ROCm build of PyTorch)
+   - `CUDA version`: `None` (not a CUDA build)
+   - `GPU available`: `True`
+   - `GPU`: your AMD card's name
 
 2. **Verify basic functionality**:
    ```bash
