@@ -6,5 +6,7 @@ __pycache__/
 results/*
 !results/.gitkeep
 
-# Downloaded word lists (environment/word_lists.py caches them here)
-data/
+# Downloaded word lists (environment/word_lists.py caches them here). Keep the
+# placeholder so the directory exists for the compose bind mount.
+data/*
+!data/.gitkeep

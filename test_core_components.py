@@ -114,7 +114,7 @@ def main():
     if passed == total:
         print("✓ All core tests passed! The project structure is correct.")
         print("\nTo rebuild the image with full dependencies, run:")
-        print("  docker build -t ai-wordle-rl .")
+        print("  docker compose build")
         return 0
     else:
         print("✗ Some core tests failed.")

@@ -117,8 +117,8 @@ def confirm_device() -> bool:
         print(f"Training on GPU: {torch.cuda.get_device_name(0)}")
         return True
 
-    print("No GPU detected. If you're in Docker, check that the container was started with")
-    print("  --device=/dev/kfd --device=/dev/dri --group-add video")
+    print("No GPU detected. Check that the container was started with `docker compose run`")
+    print("and that RENDER_GID matches the host's render group (see compose.yaml).")
     try:
         answer = input("Train on CPU instead? This is much slower. [y/N] ")
     except EOFError:

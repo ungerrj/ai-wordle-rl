@@ -1,0 +1,23 @@
+# Usage (from the repo root):
+#   docker compose build                                                  # after code changes
+#   docker compose run --rm wordle                                        # interactive shell
+#   docker compose run --rm wordle python -m training.train --episodes 1000
+services:
+  wordle:
+    build: .
+    image: ai-wordle-rl
+    # Run as the host user so files written to the mapped folders are owned by you, not root
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    # GPU access: /dev/dri/card* belongs to group video, /dev/kfd and /dev/dri/renderD* to
+    # group render. The image has no render group, so it's added by host GID
+    # (`getent group render`).
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+      - "${RENDER_GID:-990}"
+    # Training output and the word list cache live on the host
+    volumes:
+      - ./results:/app/results
+      - ./data:/app/data

@@ -12,6 +12,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     HOME=/home/robot
 
+# compose.yaml runs as the host user, which needs a writable HOME for
+# caches (matplotlib, MIOpen)
+RUN mkdir -p $HOME && chmod 1777 $HOME
+
 # Set working directory
 WORKDIR /app
 
