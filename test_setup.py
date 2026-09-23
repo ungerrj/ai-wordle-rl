@@ -103,6 +103,41 @@ def test_basic_functionality():
         traceback.print_exc()
         return False
 
+def test_feedback():
+    """Test Wordle feedback colors, including repeated letters."""
+    print("\nTesting feedback colors...")
+
+    try:
+        import gymnasium as gym
+        import environment
+
+        env = gym.make('WordleEnv-v0', accepted_list='sample-20', solution_list='sample-20').unwrapped
+
+        # (target, guess, expected) with 0 gray, 1 yellow, 2 green
+        cases = [
+            ("crane", "crane", [2, 2, 2, 2, 2]),
+            ("abcde", "bacxx", [1, 1, 2, 0, 0]),  # yellow after a yellow used this position's letter
+            ("abbey", "bobby", [1, 0, 2, 0, 2]),  # extra 'b' is gray once both are matched
+            ("tiger", "eerie", [1, 0, 1, 1, 0]),  # only one 'e' in the target
+        ]
+
+        passed = True
+        for target, guess, expected in cases:
+            env.target_word = target
+            feedback = env._calculate_feedback(guess)
+            if feedback == expected:
+                print(f"✓ {guess} vs {target}: {feedback}")
+            else:
+                print(f"✗ {guess} vs {target}: got {feedback}, expected {expected}")
+                passed = False
+        return passed
+
+    except Exception as e:
+        print(f"✗ Feedback test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def main():
     """Run all tests."""
     print("=== Testing Wordle RL Project Setup ===\n")
@@ -110,7 +145,8 @@ def main():
     tests = [
         test_imports,
         test_environment_registration,
-        test_basic_functionality
+        test_basic_functionality,
+        test_feedback
     ]
 
     passed = 0
