@@ -1,0 +1,72 @@
+# Builds the image and runs every check on the self-hosted ROCm runner (this
+# project's only target: Ubuntu + AMD GPU + Docker). The image is ~52 GB, too
+# big for GitHub-hosted runners.
+#
+# Security: the repo is public and a self-hosted runner executes workflow code
+# on the host with Docker access. Only trigger on push/manual runs, never on
+# pull_request or pull_request_target, so forks can't run code on the runner.
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux, rocm]
+    timeout-minutes: 60
+    env:
+      # Separate image tag so CI builds don't replace the local ai-wordle-rl image
+      WORDLE_IMAGE: ai-wordle-rl:ci
+      COMPOSE_PROJECT_NAME: ai-wordle-ci
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run the container as the runner user
+        run: |
+          echo "HOST_UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "HOST_GID=$(id -g)" >> "$GITHUB_ENV"
+          echo "RENDER_GID=$(getent group render | cut -d: -f3)" >> "$GITHUB_ENV"
+
+      - name: Validate compose.yaml
+        run: docker compose config --quiet
+
+      - name: Build image
+        run: docker compose build
+
+      - name: Check the GPU is visible
+        run: docker compose run --rm -T wordle python -c "import torch, sys; ok = torch.cuda.is_available(); print('GPU:', torch.cuda.get_device_name(0) if ok else None); sys.exit(0 if ok else 1)"
+
+      # Syntax errors and undefined names only; the code isn't flake8-clean yet
+      - name: Lint (errors only)
+        run: docker compose run --rm -T wordle flake8 . --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Core component tests
+        run: docker compose run --rm -T wordle python test_core_components.py
+
+      - name: Setup tests
+        run: docker compose run --rm -T wordle python -W error::UserWarning test_setup.py
+
+      - name: Demo
+        run: docker compose run --rm -T wordle python example_usage.py
+
+      # Re-download every pinned list so a vanished or changed upstream fails here
+      - name: Fetch and validate word lists
+        run: >
+          docker compose run --rm -T wordle python -c
+          "from environment.word_lists import WORD_LISTS, load_word_list;
+          [print(n, len(load_word_list(n, refresh=True))) for n in WORD_LISTS]"
+
+      - name: Training smoke run
+        run: |
+          docker compose run --rm -T wordle python -m training.train --episodes 12 --save_interval 10
+          for f in final_model.pth model_episode_10.pth training_progress.png; do
+            test -s "results/tabatkins-14855/cfreshman-2315/$f" || { echo "missing $f"; exit 1; }
+          done

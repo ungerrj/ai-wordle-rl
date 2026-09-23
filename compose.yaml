@@ -5,7 +5,8 @@
 services:
   wordle:
     build: .
-    image: ai-wordle-rl
+    # CI sets WORDLE_IMAGE so its builds don't replace your local image
+    image: ${WORDLE_IMAGE:-ai-wordle-rl}
     # Run as the host user so files written to the mapped folders are owned by you, not root
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     # GPU access: /dev/dri/card* belongs to group video, /dev/kfd and /dev/dri/renderD* to
