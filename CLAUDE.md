@@ -22,7 +22,7 @@ docker compose run --rm wordle python test_setup.py
 - It passes `/dev/kfd` and `/dev/dri` through and adds groups `video` and `render`. On the host, `/dev/kfd` and `/dev/dri/renderD*` belong to `render` (GID 990), which doesn't exist in the image, so it's added by number (`RENDER_GID`). Without GPU access, `torch.cuda.is_available()` is `False` and training asks before falling back to CPU (it aborts with exit 1 if there's no terminal to answer from, e.g. `docker compose run -T`).
 - It runs as the host user (`HOST_UID`/`HOST_GID`, default 1000), not root, so files written to the mapped folders are owned by the host user. Anything else the container writes must go under a mapped folder or `$HOME` (`/home/robot`, world-writable); `/app` itself is read-only for that user.
 - It maps `results/` and `data/` to the host. `.dockerignore` keeps both out of the image, and both keep a `.gitkeep` so the directories exist before the bind mount (otherwise Docker creates them as root).
-- The code is copied in at build time, so rebuild after edits. For a quick test without rebuilding, add `-v "$PWD":/app` to `docker compose run`.
+- The code is copied in at build time (after the `pip install` layer, so code-only rebuilds are fast), so rebuild after edits. For a quick test without rebuilding, add `-v "$PWD":/app` to `docker compose run`.
 
 Inside the container (all commands run from the repo root, `/app`; the packages are imported as top-level modules):
 
@@ -33,6 +33,8 @@ python test_setup.py                                           # imports, env re
 python test_core_components.py                                 # imports only
 python -c "import test_setup as t; t.test_basic_functionality()"   # run a single check
 ```
+
+CI (`.github/workflows/ci.yml`) runs every check above plus an errors-only flake8 (`--select=E9,F63,F7,F82`), a word list re-download, and a 12-episode training smoke run. It runs on push via Compose on a self-hosted runner labeled `rocm` (this machine); the ~52 GB image rules out GitHub-hosted runners. The repo is public, so never add `pull_request`/`pull_request_target` triggers: they would let forks run code on the host. When adding a test script or check, add a step for it there too. `example_usage.py` exits 1 on failure so CI catches it.
 
 The test files are plain scripts: each check returns `True`/`False` and `main()` sets the exit code. `pytest` collects them but reports failed checks as passing (it only warns about the return value), so run them as scripts. Adding `-W error::UserWarning` surfaces gymnasium's observation-space checker warnings as failures.
 

@@ -66,6 +66,40 @@ python test_core_components.py
 docker compose run --rm wordle python test_setup.py
 ```
 
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on every push (and manually from the Actions tab). It builds the
+image with Compose and then, inside the container on the GPU:
+- lints for syntax errors and undefined names
+- runs `test_core_components.py`, `test_setup.py` and `example_usage.py`
+- re-downloads every pinned word list and checks its size
+- does a short training run and checks the checkpoints and plot were written
+
+The image is about 52 GB, too big for GitHub's hosted runners, so CI runs on a self-hosted runner on
+the GPU machine. Jobs only run while that machine is on and the runner service is running.
+
+### Registering the runner (one time)
+
+1. On GitHub, open the repo's **Settings → Actions → Runners → New self-hosted runner** and choose
+   Linux x64. Run the download commands it shows (e.g. into `~/actions-runner`).
+2. Configure it with the `rocm` label, which the workflow requires:
+   ```bash
+   ./config.sh --url https://github.com/ungerrj/ai-wordle-rl --token <TOKEN> --labels rocm
+   ```
+3. Install it as a service running as your user. That user needs to be in the `docker`, `video` and
+   `render` groups:
+   ```bash
+   sudo ./svc.sh install $USER && sudo ./svc.sh start
+   ```
+4. In **Settings → Actions → General**, under fork pull request workflows, require approval for all
+   external contributors.
+
+The repo is public, and a self-hosted runner executes workflow code on your machine with Docker
+access. That's why the workflow triggers only on `push` and manual runs. Don't add `pull_request` or
+`pull_request_target` triggers. The step 4 setting is a backstop in case one is added.
+
+CI builds under the tag `ai-wordle-rl:ci` so it doesn't replace your local `ai-wordle-rl` image.
+
 ## Features
 
 - Custom Gymnasium environment for Wordle
