@@ -3,6 +3,7 @@ Example usage of the Wordle RL environment and agent.
 This script demonstrates how to use the implemented components.
 """
 
+import sys
 import gymnasium as gym
 from environment.wordle_env import WordleEnv
 from agents.dqn_agent import DQNAgent
@@ -75,10 +76,12 @@ def main():
         test_environment()
         test_agent()
         print("\n=== Demo completed successfully ===")
+        return 0
     except Exception as e:
         print(f"Error during demo: {e}")
         import traceback
         traceback.print_exc()
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
