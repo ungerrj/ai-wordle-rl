@@ -14,6 +14,7 @@ import os
 import argparse
 
 def train_agent(env: gym.Env,
+                output_dir: str,
                 episodes: int = 1000,
                 save_interval: int = 100,
                 render: bool = False):
@@ -22,6 +23,7 @@ def train_agent(env: gym.Env,
 
     Args:
         env: The Wordle environment to train on
+        output_dir: Directory for checkpoints and the progress plot
         episodes: Number of training episodes
         save_interval: How often to save the model
         render: Whether to render the environment during training
@@ -78,20 +80,20 @@ def train_agent(env: gym.Env,
 
         # Save model periodically
         if episode % save_interval == 0 and episode > 0:
-            model_path = f"results/model_episode_{episode}.pth"
+            model_path = os.path.join(output_dir, f"model_episode_{episode}.pth")
             agent.save_model(model_path)
             print(f"Model saved to {model_path}")
 
     # Save final model
-    agent.save_model("results/final_model.pth")
+    agent.save_model(os.path.join(output_dir, "final_model.pth"))
     print("Training completed!")
 
     # Plot training progress
-    plot_training_progress(episodes_list, scores)
+    plot_training_progress(episodes_list, scores, output_dir)
 
     return agent, scores
 
-def plot_training_progress(episodes: list, scores: list):
+def plot_training_progress(episodes: list, scores: list, output_dir: str):
     """Plot training progress."""
     plt.figure(figsize=(10, 6))
     plt.plot(episodes, scores, label='Episode Score')
@@ -100,9 +102,10 @@ def plot_training_progress(episodes: list, scores: list):
     plt.title('Training Progress')
     plt.legend()
     plt.grid(True)
-    plt.savefig('results/training_progress.png')
+    plot_path = os.path.join(output_dir, "training_progress.png")
+    plt.savefig(plot_path)
     plt.close()
-    print("Training progress plot saved to results/training_progress.png")
+    print(f"Training progress plot saved to {plot_path}")
 
 def confirm_device() -> bool:
     """Report the training device, asking before falling back to CPU.
@@ -125,9 +128,6 @@ def confirm_device() -> bool:
 
 def main():
     """Main training function."""
-
-    # Create results directory
-    os.makedirs('results', exist_ok=True)
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Train Wordle RL agent')
@@ -155,9 +155,15 @@ def main():
     if not confirm_device():
         raise SystemExit("Training aborted.")
 
+    # Each word list variant gets its own results directory
+    output_dir = os.path.join('results', args.accepted, args.solutions)
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Writing results to {output_dir}/")
+
     # Train the agent
     agent, scores = train_agent(
         env,
+        output_dir,
         episodes=args.episodes,
         save_interval=args.save_interval,
         render=args.render

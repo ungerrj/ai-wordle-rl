@@ -9,7 +9,7 @@ This project implements a reinforcement learning agent to solve Wordle puzzles u
 - `training/` - Training scripts and configurations
 - `utils/` - Utility functions
 - `notebooks/` - Jupyter notebooks for experimentation
-- `results/` - Training results and logs
+- `results/` - Training results, one folder per word list variant (`results/<accepted>/<solutions>/`)
 
 ## Requirements
 
