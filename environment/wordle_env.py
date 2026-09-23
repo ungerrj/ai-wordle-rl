@@ -166,7 +166,7 @@ class WordleEnv(gym.Env):
             if feedback[i] == 2:
                 continue  # Already marked as green
 
-            if guess_chars[i] in target_chars and target_chars[i] is not None:
+            if guess_chars[i] in target_chars:
                 feedback[i] = 1
                 # Find the first unused occurrence
                 idx = target_chars.index(guess_chars[i])
