@@ -33,19 +33,16 @@
 **Error**: "No ROCm support found" or HIP not available inside container
 
 **Solutions**:
-- Always run with GPU access flags:
-  ```bash
-  docker run --device=/dev/kfd --device=/dev/dri --group-add video -it ai-wordle-rl bash
-  ```
+- Start the container with `docker compose run --rm wordle`, which passes `/dev/kfd` and `/dev/dri` through and adds the `video` and `render` groups (see `compose.yaml`)
 - Verify host ROCm installation: `/opt/rocm/bin/rocminfo` (should work on host)
-- Check user is in video group: `groups $USER` (should include "video")
-- If not: `sudo usermod -aG video $USER` then log out and back in
+- Check user is in the video and render groups: `groups $USER`
+- If not: `sudo usermod -aG video,render $USER` then log out and back in
 
 **Error**: Permission denied accessing /dev/kfd or /dev/dri
 
 **Solutions**:
-- The `--group-add video` flag is essential for GPU access
-- Ensure host user is in video group
+- `/dev/dri/card*` belongs to group `video`, but `/dev/kfd` and `/dev/dri/renderD*` belong to group `render`. The container needs both; `compose.yaml` adds `render` by host GID (`RENDER_GID`, default 990). Check yours with `getent group render`
+- Ensure host user is in the video and render groups
 - Log out and back in after changing group membership
 - As last resort (less secure): add `--privileged` flag for testing only
 
@@ -55,7 +52,7 @@
 
 **Solution**: Run the GPU check in [Verification Steps](#verification-steps) step 1. ROCm builds of PyTorch use the `torch.cuda` API, so a working GPU shows `GPU available: True` even though no CUDA is involved.
 
-If `GPU available` is `False` but `HIP version` shows a version, the image's PyTorch is fine and the container can't see the GPU: it was started without `--device=/dev/kfd --device=/dev/dri --group-add video` (see section 3).
+If `GPU available` is `False` but `HIP version` shows a version, the image's PyTorch is fine and the container can't see the GPU: it wasn't started through `docker compose run`, or `RENDER_GID` doesn't match the host's `render` group (see section 3).
 
 ### 5. General Testing Failures
 
@@ -73,7 +70,7 @@ After successful build and run:
 
 1. **Check PyTorch can use the GPU**:
    ```bash
-   docker run --device=/dev/kfd --device=/dev/dri --group-add video --rm ai-wordle-rl \
+   docker compose run --rm wordle \
    python -c "import torch; print('HIP version:', torch.version.hip); print('CUDA version:', torch.version.cuda); print('GPU available:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
    ```
    A working setup shows:
@@ -84,14 +81,12 @@ After successful build and run:
 
 2. **Verify basic functionality**:
    ```bash
-   docker run --device=/dev/kfd --device=/dev/dri --group-add video --rm ai-wordle-rl \
-   python test_setup.py
+   docker compose run --rm wordle python test_setup.py
    ```
 
 3. **Test example execution**:
    ```bash
-   docker run --device=/dev/kfd --device=/dev/dri --group-add video --rm ai-wordle-rl \
-   python example_usage.py
+   docker compose run --rm wordle python example_usage.py
    ```
 
 ## Notes

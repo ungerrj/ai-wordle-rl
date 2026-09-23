@@ -13,13 +13,16 @@ This is a personal project with a single target: Ubuntu 26 host, AMD GPU (ROCm),
 ## Commands
 
 ```bash
-docker build -t ai-wordle-rl .
-docker run --device=/dev/kfd --device=/dev/dri --group-add video -it --rm ai-wordle-rl bash
+docker compose build                       # after code changes
+docker compose run --rm wordle             # interactive shell
+docker compose run --rm wordle python test_setup.py
 ```
 
-All three device flags are required for GPU access. Without them, `torch.cuda.is_available()` is `False` and training asks before falling back to CPU (it aborts with exit 1 if there's no terminal to answer from, e.g. `docker run` without `-i`).
-
-The Dockerfile copies the code in at build time, so either rebuild after edits or mount the working tree: add `-v "$PWD":/app` to test current code without rebuilding.
+`compose.yaml` is the only supported way to start the container:
+- It passes `/dev/kfd` and `/dev/dri` through and adds groups `video` and `render`. On the host, `/dev/kfd` and `/dev/dri/renderD*` belong to `render` (GID 990), which doesn't exist in the image, so it's added by number (`RENDER_GID`). Without GPU access, `torch.cuda.is_available()` is `False` and training asks before falling back to CPU (it aborts with exit 1 if there's no terminal to answer from, e.g. `docker compose run -T`).
+- It runs as the host user (`HOST_UID`/`HOST_GID`, default 1000), not root, so files written to the mapped folders are owned by the host user. Anything else the container writes must go under a mapped folder or `$HOME` (`/home/robot`, world-writable); `/app` itself is read-only for that user.
+- It maps `results/` and `data/` to the host. `.dockerignore` keeps both out of the image, and both keep a `.gitkeep` so the directories exist before the bind mount (otherwise Docker creates them as root).
+- The code is copied in at build time, so rebuild after edits. For a quick test without rebuilding, add `-v "$PWD":/app` to `docker compose run`.
 
 Inside the container (all commands run from the repo root, `/app`; the packages are imported as top-level modules):
 

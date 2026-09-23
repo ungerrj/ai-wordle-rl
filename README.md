@@ -25,13 +25,20 @@ ROCm build of PyTorch.
 
 ```bash
 # Build the image (rebuild after code changes; the code is copied in at build time)
-docker build -t ai-wordle-rl .
+docker compose build
 
-# Run the container with GPU access
-docker run --device=/dev/kfd --device=/dev/dri --group-add video -it --rm ai-wordle-rl bash
+# Open a shell in the container with GPU access
+docker compose run --rm wordle
+
+# Or run a single command
+docker compose run --rm wordle python -m training.train --episodes 1000
 ```
 
-GPU access needs all three flags: `--device=/dev/kfd`, `--device=/dev/dri` and `--group-add video`.
+`compose.yaml` passes the GPU devices through and maps `results/` and `data/` to the host, so
+training output and the downloaded word lists land in your working tree. The container runs as your
+user (UID/GID 1000 by default) so those files are yours. If your IDs differ, set `HOST_UID`,
+`HOST_GID` and `RENDER_GID` (the host's `render` group, from `getent group render`) in the
+environment or a `.env` file.
 
 ## Usage
 
@@ -56,7 +63,7 @@ python test_setup.py
 python test_core_components.py
 
 # Or from the host:
-docker run --device=/dev/kfd --device=/dev/dri --group-add video --rm ai-wordle-rl python test_setup.py
+docker compose run --rm wordle python test_setup.py
 ```
 
 ## Features
