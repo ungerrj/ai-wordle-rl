@@ -38,8 +38,11 @@ GPU access needs all three flags: `--device=/dev/kfd`, `--device=/dev/dri` and `
 Inside the container (working directory `/app`):
 
 ```bash
-# Train the agent
+# Train the agent (downloads the word lists to data/word_lists/ on first run)
 python -m training.train --episodes 1000
+
+# Choose the word lists: --accepted is what the agent may guess, --solutions is what targets are drawn from
+python -m training.train --accepted tabatkins-14855 --solutions cfreshman-2315
 
 # Run the demo
 python example_usage.py
