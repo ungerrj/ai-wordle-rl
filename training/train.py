@@ -8,27 +8,27 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from environment.wordle_env import WordleEnv
+from environment.word_lists import DEFAULT_ACCEPTED, DEFAULT_SOLUTIONS, WORD_LISTS, load_word_list
 from agents.dqn_agent import DQNAgent
 import os
 import argparse
 
-def train_agent(episodes: int = 1000,
+def train_agent(env: gym.Env,
+                episodes: int = 1000,
                 save_interval: int = 100,
                 render: bool = False):
     """
     Train the DQN agent on the Wordle environment.
 
     Args:
+        env: The Wordle environment to train on
         episodes: Number of training episodes
         save_interval: How often to save the model
         render: Whether to render the environment during training
     """
 
-    # Create environment
-    env = gym.make('WordleEnv-v0')
-
     # Create agent
-    agent = DQNAgent(action_space=len(env.unwrapped.word_list))
+    agent = DQNAgent(action_space=len(env.unwrapped.accepted_words))
 
     # Training statistics
     scores = []
@@ -134,14 +134,30 @@ def main():
     parser.add_argument('--episodes', type=int, default=1000, help='Number of training episodes')
     parser.add_argument('--save_interval', type=int, default=100, help='Save model every N episodes')
     parser.add_argument('--render', action='store_true', help='Render the environment during training')
+    parser.add_argument('--accepted', default=DEFAULT_ACCEPTED, choices=WORD_LISTS,
+                        help='Word list the agent may guess from (its action space)')
+    parser.add_argument('--solutions', default=DEFAULT_SOLUTIONS, choices=WORD_LISTS,
+                        help='Word list target words are drawn from')
+    parser.add_argument('--refresh_word_lists', action='store_true',
+                        help='Re-download the word lists even if they are cached')
 
     args = parser.parse_args()
+
+    if args.refresh_word_lists:
+        for name in (args.accepted, args.solutions):
+            load_word_list(name, refresh=True)
+
+    # Create the environment first so a word list problem fails before the device prompt
+    env = gym.make('WordleEnv-v0', accepted_list=args.accepted, solution_list=args.solutions)
+    print(f"Accepted guesses: {args.accepted} ({len(env.unwrapped.accepted_words)} words), "
+          f"solutions: {args.solutions} ({len(env.unwrapped.solution_words)} words)")
 
     if not confirm_device():
         raise SystemExit("Training aborted.")
 
     # Train the agent
     agent, scores = train_agent(
+        env,
         episodes=args.episodes,
         save_interval=args.save_interval,
         render=args.render

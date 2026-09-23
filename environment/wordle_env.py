@@ -8,6 +8,7 @@ from gymnasium import spaces
 import numpy as np
 import random
 from typing import Dict, List, Tuple, Optional
+from .word_lists import DEFAULT_ACCEPTED, DEFAULT_SOLUTIONS, load_word_list
 
 class WordleEnv(gym.Env):
     """
@@ -19,7 +20,10 @@ class WordleEnv(gym.Env):
         - Number of remaining guesses
 
     Action:
-        - A valid 5-letter word from the vocabulary
+        - An index into the accepted word list (every accepted word is a legal guess)
+
+    Target:
+        - Drawn from the solution list, which must be a subset of the accepted list
 
     Reward:
         - +100 for correct guess
@@ -27,11 +31,21 @@ class WordleEnv(gym.Env):
         - -0.1 for invalid guess
     """
 
-    def __init__(self, word_list_file: str = "words.txt", max_attempts: int = 6):
+    def __init__(self, accepted_list: str = DEFAULT_ACCEPTED, solution_list: str = DEFAULT_SOLUTIONS,
+                 max_attempts: int = 6):
         super(WordleEnv, self).__init__()
 
-        # Load word list
-        self.word_list = self._load_word_list(word_list_file)
+        # Load word lists by name (see word_lists.WORD_LISTS)
+        self.accepted_list = accepted_list
+        self.solution_list = solution_list
+        self.accepted_words = load_word_list(accepted_list)
+        self.solution_words = load_word_list(solution_list)
+        not_accepted = sorted(set(self.solution_words) - set(self.accepted_words))
+        if not_accepted:
+            raise ValueError(
+                f"Solution list '{solution_list}' has {len(not_accepted)} words missing from "
+                f"accepted list '{accepted_list}', e.g. {not_accepted[:5]}"
+            )
         self.max_attempts = max_attempts
         self.target_word = ""
         self.attempts = 0
@@ -39,8 +53,8 @@ class WordleEnv(gym.Env):
         self.feedback = []
 
         # Define action and observation spaces
-        # Action space: any valid 5-letter word from vocabulary
-        self.action_space = spaces.Discrete(len(self.word_list))
+        # Action space: one action per accepted word
+        self.action_space = spaces.Discrete(len(self.accepted_words))
 
         # Observation space:
         # - Current guess (5 letters)
@@ -55,27 +69,12 @@ class WordleEnv(gym.Env):
         # Initialize game state
         self.reset()
 
-    def _load_word_list(self, filename: str) -> List[str]:
-        """Load valid words from file."""
-        try:
-            with open(filename, 'r') as f:
-                words = [line.strip().lower() for line in f if len(line.strip()) == 5]
-            return words
-        except FileNotFoundError:
-            # If file doesn't exist, create a small sample word list
-            return [
-                "apple", "beach", "chair", "dance", "eagle",
-                "flame", "grape", "house", "igloo", "jelly",
-                "knife", "lemon", "magic", "night", "ocean",
-                "piano", "queen", "river", "snake", "tiger"
-            ]
-
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[Dict, Dict]:
         """Reset the environment to initial state."""
         super().reset(seed=seed)
 
-        # Select a random target word
-        self.target_word = random.choice(self.word_list)
+        # Select a random target word from the solutions
+        self.target_word = random.choice(self.solution_words)
         self.attempts = 0
         self.guesses = []
         self.feedback = []
@@ -106,14 +105,14 @@ class WordleEnv(gym.Env):
     def step(self, action: int) -> Tuple[Dict, float, bool, bool, Dict]:
         """Execute one time step within the environment."""
         # Get the guessed word
-        if action >= len(self.word_list):
+        if action >= len(self.accepted_words):
             # Invalid action
             reward = -0.1
             done = False
             info = {"invalid_action": True}
             return self._get_observation(), reward, done, False, info
 
-        guess_word = self.word_list[action]
+        guess_word = self.accepted_words[action]
 
         # Validate word is 5 letters
         if len(guess_word) != 5:

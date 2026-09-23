@@ -78,7 +78,7 @@ def test_basic_functionality():
         from agents.dqn_agent import DQNAgent
 
         # Test environment creation
-        env = gym.make('WordleEnv-v0')
+        env = gym.make('WordleEnv-v0', accepted_list='sample-20', solution_list='sample-20')
         print("✓ Environment created successfully")
 
         # Test agent creation

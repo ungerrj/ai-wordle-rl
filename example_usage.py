@@ -13,7 +13,7 @@ def test_environment():
     print("Testing Wordle Environment...")
 
     # Create environment
-    env = gym.make('WordleEnv-v0')
+    env = gym.make('WordleEnv-v0', accepted_list='sample-20', solution_list='sample-20')
 
     # Reset environment
     state, _ = env.reset()
@@ -40,7 +40,7 @@ def test_agent():
     print("\nTesting DQN Agent...")
 
     # Create environment
-    env = gym.make('WordleEnv-v0')
+    env = gym.make('WordleEnv-v0', accepted_list='sample-20', solution_list='sample-20')
 
     # Create agent
     agent = DQNAgent(action_space=env.action_space.n)
@@ -55,7 +55,7 @@ def test_agent():
 
         # Try to get a valid word from the action
         try:
-            word = env.unwrapped.word_list[action]
+            word = env.unwrapped.accepted_words[action]
             print(f"  Selected word: {word}")
         except IndexError:
             print("  Invalid action (index out of bounds)")

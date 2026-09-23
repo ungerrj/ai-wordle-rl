@@ -5,3 +5,6 @@ __pycache__/
 # Training output (the directory must exist, so keep the placeholder)
 results/*
 !results/.gitkeep
+
+# Downloaded word lists (environment/word_lists.py caches them here)
+data/
