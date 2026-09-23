@@ -104,6 +104,25 @@ def plot_training_progress(episodes: list, scores: list):
     plt.close()
     print("Training progress plot saved to results/training_progress.png")
 
+def confirm_device() -> bool:
+    """Report the training device, asking before falling back to CPU.
+
+    Returns True to continue training, False to abort. Without an interactive
+    terminal there is no one to ask, so a missing GPU aborts.
+    """
+    if torch.cuda.is_available():
+        print(f"Training on GPU: {torch.cuda.get_device_name(0)}")
+        return True
+
+    print("No GPU detected. If you're in Docker, check that the container was started with")
+    print("  --device=/dev/kfd --device=/dev/dri --group-add video")
+    try:
+        answer = input("Train on CPU instead? This is much slower. [y/N] ")
+    except EOFError:
+        print("\nNo terminal to answer from; aborting.")
+        return False
+    return answer.strip().lower() in ("y", "yes")
+
 def main():
     """Main training function."""
 
@@ -117,6 +136,9 @@ def main():
     parser.add_argument('--render', action='store_true', help='Render the environment during training')
 
     args = parser.parse_args()
+
+    if not confirm_device():
+        raise SystemExit("Training aborted.")
 
     # Train the agent
     agent, scores = train_agent(
