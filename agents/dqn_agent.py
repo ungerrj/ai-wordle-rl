@@ -16,7 +16,7 @@ from typing import Tuple, List
 class DQN(nn.Module):
     """Deep Q-Network architecture for Wordle."""
 
-    def __init__(self, input_size: int = 5*26 + 5*3 + 1, hidden_size: int = 256, output_size: int = 1000):
+    def __init__(self, output_size: int, input_size: int = 5*26 + 5*3 + 1, hidden_size: int = 256):
         super(DQN, self).__init__()
 
         # Input layer
@@ -26,20 +26,14 @@ class DQN(nn.Module):
         self.hidden1 = nn.Linear(hidden_size, hidden_size)
         self.hidden2 = nn.Linear(hidden_size, hidden_size)
 
-        # Output layer
+        # Output layer: one Q-value per word in the action space
         self.output_layer = nn.Linear(hidden_size, output_size)
-
-        # Dropout for regularization
-        self.dropout = nn.Dropout(0.2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the network."""
         x = F.relu(self.input_layer(x))
-        x = self.dropout(x)
         x = F.relu(self.hidden1(x))
-        x = self.dropout(x)
         x = F.relu(self.hidden2(x))
-        x = self.dropout(x)
         x = self.output_layer(x)
         return x
 
@@ -61,8 +55,8 @@ class DQNAgent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Q-network and target network
-        self.q_network = DQN().to(self.device)
-        self.target_network = DQN().to(self.device)
+        self.q_network = DQN(output_size=action_space).to(self.device)
+        self.target_network = DQN(output_size=action_space).to(self.device)
 
         # Optimizer
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
