@@ -1,0 +1,10 @@
+# Requirements for Wordle RL project
+# Targets Python 3.14 (matches the Docker base image). These are the first
+# releases that ship Python 3.14 wheels. torch is already in the ROCm base
+# image; the Dockerfile installs with -c rocm-constraints.txt so pip keeps it.
+gymnasium>=1.0
+numpy>=2.3.2
+matplotlib>=3.10.5
+torch>=2.13.0
+pandas>=2.3.3
+seaborn>=0.13.2

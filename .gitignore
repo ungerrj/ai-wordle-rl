@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Training output (the directory must exist, so keep the placeholder)
+results/*
+!results/.gitkeep
